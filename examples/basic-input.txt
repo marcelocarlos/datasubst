@@ -1,0 +1,7 @@
+key1: {{ .key1 }}
+key3: {{ .key2.first.key3 }}
+key3: {{ .key2.second.key3 }}
+key3-dynamic: {{ (index .key2 "first").key3 }}
+{{- if .key4 }}
+key5: {{ .key5 }}
+{{ end }}
