@@ -1,8 +1,8 @@
 # datasubst
 
-A simple [go template](https://golang.org/pkg/text/template/) based tool based that uses structured data like JSON and YAML as data source.
+A simple [go template](https://golang.org/pkg/text/template/) based tool that supports JSON, YAML and environment variables as data sources.
 
-This tool has been initially written as an alternative to `envsubst` in order to support YAML files as data sources. Since it is powered by go template, [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions), loops, conditionals, etc can be used offering extra flexibility.
+This tool has been written as an alternative to `envsubst` in order to support additional data source formats, such as YAML and JSON files. Since it is powered by go template, [built-in functions](https://golang.org/pkg/text/template/#hdr-Functions), loops, conditionals and more can be used for extra flexibility.
 
 ## Installation
 
@@ -26,11 +26,15 @@ go get github.com/marcelocarlos/datasubst
 datasubst --json-data examples/basic-data.json -i examples/basic-input.txt
 # Using YAML as data source
 datasubst --yaml-data examples/basic-data.yaml -i examples/basic-input.txt
+# Using environment variables as data source
+TEST1="hello" TEST2="world" datasubst --input examples/basic-input-env.txt --env-data
 
 # Using stdin - JSON
 echo "v1: {{ .key1 }}" | datasubst --json-data examples/basic-data.json
 # Using stdin - YAML
 echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
+# Using stdin - env
+echo "example: {{ .VAR3 }}" | VAR3="v3" datasubst --env-data
 ```
 
 See [examples](./examples/) for more.
