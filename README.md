@@ -26,11 +26,15 @@ go get github.com/marcelocarlos/datasubst
 datasubst --json-data examples/basic-data.json -i examples/basic-input.txt
 # Using YAML as data source
 datasubst --yaml-data examples/basic-data.yaml -i examples/basic-input.txt
+# Using environment variables as data source
+TEST1="hello" TEST2="world" datasubst --input examples/basic-input-env.txt --env-data
 
 # Using stdin - JSON
 echo "v1: {{ .key1 }}" | datasubst --json-data examples/basic-data.json
 # Using stdin - YAML
 echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
+# Using stdin - env vars
+echo "example: {{ .VAR3 }}" | VAR3="v3" datasubst --env-data
 ```
 
 See [examples](./examples/) for more.

@@ -9,17 +9,19 @@ import (
 	"os"
 	"path/filepath"
 	"runtime/debug"
+	"strings"
 	"text/template"
 
 	"gopkg.in/yaml.v3"
 )
 
 const usage = `Usage:
-    datasubst (--json-data DATA_INPUT | --yaml-data DATA_INPUT) [-i INPUT] [-o OUTPUT]
+    datasubst (--json-data DATA_INPUT | --yaml-data DATA_INPUT | --env-data) [-i INPUT] [-o OUTPUT]
 
 Options:
     -j, --json-data DATA_INPUT   Input data source in JSON format.
     -y, --yaml-data DATA_INPUT   Input data source in YAML format.
+    -e, --env-data               Input data source comes from environment variables.
     -i, --input INPUT            Input template file in go template format.
     -o, --output OUTPUT          Write the output to the file at OUTPUT.
         --help PATH              Display this help and exit.
@@ -29,7 +31,8 @@ INPUT defaults to standard input and OUTPUT defaults to standard output.
 
 Examples:
     $ datasubst --input examples/basic-input.txt --json-data examples/basic-data.json
-    $ echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml`
+    $ echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
+    $ TEST1="hello" TEST2="world" datasubst --input examples/basic-input-env.txt --env-data`
 
 var Version string
 
@@ -61,6 +64,25 @@ func parseJSON(jsonDataFile string) (interface{}, error) {
 	return data, nil
 }
 
+func parseEnv() (interface{}, error) {
+	data := make(map[string]string)
+	for _, v := range os.Environ() {
+		envKv := strings.Split(v, "=")
+		data[envKv[0]] = envKv[1]
+	}
+	return data, nil
+}
+
+func countTrue(b ...bool) int {
+	n := 0
+	for _, v := range b {
+		if v {
+			n++
+		}
+	}
+	return n
+}
+
 func main() {
 	log.SetFlags(0)
 	flag.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", usage) }
@@ -70,13 +92,15 @@ func main() {
 
 	var (
 		inputFile, outputFile, jsonDataFile, yamlDataFile string
-		helpFlag, versionFlag                             bool
+		envFlag, helpFlag, versionFlag                    bool
 	)
 
 	flag.StringVar(&inputFile, "input", "", "input template file in go template format")
 	flag.StringVar(&inputFile, "i", "", "input template file in go template format")
 	flag.StringVar(&jsonDataFile, "json-data", "", "input data source in JSON format")
 	flag.StringVar(&jsonDataFile, "j", "", "input data source in JSON format")
+	flag.BoolVar(&envFlag, "env-data", false, "input data source comes from environment variables")
+	flag.BoolVar(&envFlag, "e", false, "input data source comes from environment variables")
 	flag.StringVar(&outputFile, "output", "", "write the output to the file at OUTPUT")
 	flag.StringVar(&outputFile, "o", "", "write the output to the file at OUTPUT")
 	flag.StringVar(&yamlDataFile, "yaml-data", "", "input data source in YAML format")
@@ -103,8 +127,8 @@ func main() {
 		return
 	}
 
-	if (jsonDataFile == "" && yamlDataFile == "") || (jsonDataFile != "" && yamlDataFile != "") {
-		log.Fatal("Error: please specify --json-data or --yaml-data")
+	if countTrue(jsonDataFile != "", yamlDataFile != "", envFlag) != 1 {
+		log.Fatal("Error: please specify --json-data, --yaml-data or --env-data")
 	}
 	// Read input
 	in := os.Stdin
@@ -124,8 +148,10 @@ func main() {
 	var data interface{}
 	if jsonDataFile != "" {
 		data, err = parseJSON(jsonDataFile)
-	} else {
+	} else if yamlDataFile != "" {
 		data, err = parseYAML(yamlDataFile)
+	} else {
+		data, err = parseEnv()
 	}
 	if err != nil {
 		log.Fatalf("Error opening data file: %v\n", err)
