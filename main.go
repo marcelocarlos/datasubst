@@ -21,7 +21,7 @@ Options:
     -j, --json-data DATA_INPUT   Input data source in JSON format.
     -y, --yaml-data DATA_INPUT   Input data source in YAML format.
     -i, --input INPUT            Input template file in go template format.
-		-o, --output OUTPUT          Write the output to the file at OUTPUT.
+    -o, --output OUTPUT          Write the output to the file at OUTPUT.
         --help PATH              Display this help and exit.
         --version                Output version information and exit.
 
