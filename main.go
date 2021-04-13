@@ -24,7 +24,8 @@ Options:
     -e, --env-data               Input data source comes from environment variables.
     -i, --input INPUT            Input template file in go template format.
     -o, --output OUTPUT          Write the output to the file at OUTPUT.
-        --help PATH              Display this help and exit.
+    -s, --strict                 Strict mode (causes an error if a key is missing)
+        --help                   Display this help and exit.
         --version                Output version information and exit.
 
 INPUT defaults to standard input and OUTPUT defaults to standard output.
@@ -92,7 +93,7 @@ func main() {
 
 	var (
 		inputFile, outputFile, jsonDataFile, yamlDataFile string
-		envFlag, helpFlag, versionFlag                    bool
+		envFlag, strictFlag, helpFlag, versionFlag        bool
 	)
 
 	flag.StringVar(&inputFile, "input", "", "input template file in go template format")
@@ -105,6 +106,8 @@ func main() {
 	flag.StringVar(&outputFile, "o", "", "write the output to the file at OUTPUT")
 	flag.StringVar(&yamlDataFile, "yaml-data", "", "input data source in YAML format")
 	flag.StringVar(&yamlDataFile, "y", "", "input data source in YAML format")
+	flag.BoolVar(&strictFlag, "strict", false, "strict mode (causes an error if a key is missing)")
+	flag.BoolVar(&strictFlag, "s", false, "strict mode (causes an error if a key is missing)")
 	flag.BoolVar(&versionFlag, "version", false, "output version information and exit")
 	flag.BoolVar(&helpFlag, "help", false, "display this help and exit")
 	flag.Parse()
@@ -157,7 +160,11 @@ func main() {
 		log.Fatalf("Error opening data file: %v\n", err)
 	}
 	// Parse Input
-	tpl, err := template.New("template").Parse(string(tplStr))
+	missingkey := "default"
+	if strictFlag {
+		missingkey = "error"
+	}
+	tpl, err := template.New("template").Option(fmt.Sprintf("missingkey=%s", missingkey)).Parse(string(tplStr))
 	if err != nil {
 		log.Fatalf("Error parsing template: %v\n", err)
 	}
