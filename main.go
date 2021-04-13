@@ -24,7 +24,7 @@ Options:
     -e, --env-data               Input data source comes from environment variables.
     -i, --input INPUT            Input template file in go template format.
     -o, --output OUTPUT          Write the output to the file at OUTPUT.
-		-s, --strict                 Strict mode (causes an error if a key is missing)
+    -s, --strict                 Strict mode (causes an error if a key is missing)
         --help                   Display this help and exit.
         --version                Output version information and exit.
 
