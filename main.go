@@ -25,6 +25,7 @@ Options:
     -i, --input INPUT            Input template file in go template format.
     -o, --output OUTPUT          Write the output to the file at OUTPUT.
     -s, --strict                 Strict mode (causes an error if a key is missing)
+    -d, --delimiters             Set the delimiters used in the templates in the format <left>:<right> (default: '{{:}}')
         --help                   Display this help and exit.
         --version                Output version information and exit.
 
@@ -33,7 +34,8 @@ INPUT defaults to standard input and OUTPUT defaults to standard output.
 Examples:
     $ datasubst --input examples/basic-input.txt --json-data examples/basic-data.json
     $ echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
-    $ TEST1="hello" TEST2="world" datasubst --input examples/basic-input-env.txt --env-data`
+    $ echo "{{ .TEST1 }} {{ .TEST2 }}" | TEST1="hello" TEST2="world" datasubst --env-data
+    $ echo "(( .TEST ))" | TEST="hi" datasubst --env-data -d '((:))'`
 
 var Version string
 
@@ -92,8 +94,8 @@ func main() {
 	}
 
 	var (
-		inputFile, outputFile, jsonDataFile, yamlDataFile string
-		envFlag, strictFlag, helpFlag, versionFlag        bool
+		inputFile, outputFile, jsonDataFile, yamlDataFile, delimiters string
+		envFlag, strictFlag, helpFlag, versionFlag                    bool
 	)
 
 	flag.StringVar(&inputFile, "input", "", "input template file in go template format")
@@ -106,6 +108,8 @@ func main() {
 	flag.StringVar(&outputFile, "o", "", "write the output to the file at OUTPUT")
 	flag.StringVar(&yamlDataFile, "yaml-data", "", "input data source in YAML format")
 	flag.StringVar(&yamlDataFile, "y", "", "input data source in YAML format")
+	flag.StringVar(&delimiters, "delimiters", "", "Set the delimiters used in the templates in the format <left>:<right> (default: '{{:}}')")
+	flag.StringVar(&delimiters, "d", "", "Set the delimiters used in the templates in the format <left>:<right> (default: '{{:}}')")
 	flag.BoolVar(&strictFlag, "strict", false, "strict mode (causes an error if a key is missing)")
 	flag.BoolVar(&strictFlag, "s", false, "strict mode (causes an error if a key is missing)")
 	flag.BoolVar(&versionFlag, "version", false, "output version information and exit")
@@ -159,12 +163,18 @@ func main() {
 	if err != nil {
 		log.Fatalf("Error opening data file: %v\n", err)
 	}
-	// Parse Input
-	missingkey := "default"
+	tpl := template.New("template")
 	if strictFlag {
-		missingkey = "error"
+		tpl.Option("missingkey=error")
 	}
-	tpl, err := template.New("template").Option(fmt.Sprintf("missingkey=%s", missingkey)).Parse(string(tplStr))
+	if delimiters != "" {
+		if strings.Count(delimiters, ":") != 1 || delimiters[len(delimiters)-1:] == ":" || delimiters[0:1] == ":" {
+			log.Fatal("Error: invalid delimiter format. Must be '<left>:<right>' and ':'")
+		}
+		d := strings.Split(delimiters, ":")
+		tpl.Delims(d[0], d[1])
+	}
+	tpl, err = tpl.Parse(string(tplStr))
 	if err != nil {
 		log.Fatalf("Error parsing template: %v\n", err)
 	}
