@@ -18,6 +18,4 @@ exclude-labels:
   - 'skip-changelog'
 change-template: '- $TITLE @$AUTHOR (#$NUMBER)'
 template: |
-  ## Changes
-
   $CHANGES
