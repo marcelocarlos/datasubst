@@ -34,7 +34,10 @@ echo "v1: {{ .key1 }}" | datasubst --json-data examples/basic-data.json
 # Using stdin - YAML
 echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
 # Using stdin - env
-echo "example: {{ .VAR3 }}" | VAR3="v3" datasubst --env-data
+echo "{{ .TEST1 }} {{ .TEST2 }}" | TEST1="hello" TEST2="world" datasubst --env-data
+
+# Using additional options, such -s (strict mode) and -d (change delimiters)
+echo "(( .TEST ))" | TEST="hi" datasubst --env-data -d '((:))' -s
 ```
 
 See [examples](./examples/) for more.
