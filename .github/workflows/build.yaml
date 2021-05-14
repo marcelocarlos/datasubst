@@ -1,6 +1,6 @@
 on:
   release:
-    types: [created]
+    types: [created, published]
   pull_request:
 name: Build binaries
 jobs:
