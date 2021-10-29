@@ -19,6 +19,12 @@ Alternatively, you can install a development version using:
 go get github.com/marcelocarlos/datasubst
 ```
 
+If you don't want to install it and run it via Docker instead:
+
+```shell
+docker run --rm ghcr.io/marcelocarlos/datasubst:v0
+```
+
 ## Usage
 
 ```shell
