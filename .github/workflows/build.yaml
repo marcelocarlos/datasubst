@@ -64,6 +64,29 @@ jobs:
               });
             }
 
+      - name: Log in to the Container registry
+        if: ${{ github.event_name == 'release' }}
+        uses: docker/login-action@v1
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push image
+        if: ${{ github.event_name == 'release' }}
+        run: |
+          VERSION=$(git describe --tags --abbrev=0)
+
+          docker build -t ghcr.io/${{ github.repository }}:latest .
+          docker tag ghcr.io/${{ github.repository }}:latest ghcr.io/${{ github.repository }}:${VERSION}
+          docker tag ghcr.io/${{ github.repository }}:latest ghcr.io/${{ github.repository }}:${VERSION:0:4}
+          docker tag ghcr.io/${{ github.repository }}:latest ghcr.io/${{ github.repository }}:${VERSION:0:2}
+
+          docker push ghcr.io/${{ github.repository }}:latest
+          docker push ghcr.io/${{ github.repository }}:${VERSION}
+          docker push ghcr.io/${{ github.repository }}:${VERSION:0:4}
+          docker push ghcr.io/${{ github.repository }}:${VERSION:0:2}
+
       - name: Trigger homebrew tap update
         if: ${{ github.event_name == 'release' }}
         run: |
