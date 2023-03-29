@@ -1,0 +1,3 @@
+key3: {{ .first.key3 }}
+key3: {{ .second.key3 }}
+key3-dynamic: {{ (index . "first").key3 }}

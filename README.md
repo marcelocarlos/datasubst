@@ -42,6 +42,11 @@ echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.ya
 # Using stdin - env
 echo "{{ .TEST1 }} {{ .TEST2 }}" | TEST1="hello" TEST2="world" datasubst --env-data
 
+# Specifying JSON subtrees to use (available for JSON and YAML)
+echo "{{ .first.key3 }}" | datasubst --json-data examples/basic-data.json --subtree .key2
+# Specifying YAML subtrees to use (available for JSON and YAML)
+datasubst --json-data examples/basic-data.json --subtree .key2 -i examples/basic-input-subtree.txt
+
 # Using additional options, such -s (strict mode) and -d (change delimiters)
 echo "(( .TEST ))" | TEST="hi" datasubst --env-data -d '((:))' -s
 ```
