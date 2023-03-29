@@ -1,6 +1,11 @@
+name: Run checks
+
 on:
   pull_request:
-name: Run checks
+
+permissions:
+  contents: read
+
 jobs:
   checks:
     name: Run checks

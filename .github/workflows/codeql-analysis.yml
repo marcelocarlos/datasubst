@@ -1,4 +1,5 @@
 name: "CodeQL"
+
 on:
   push:
     branches: [ main ]
@@ -9,11 +10,15 @@ on:
     - cron: '42 09 * * 2'
   workflow_dispatch:
     description: "Manual trigger"
-    
+
+permissions:
+  actions: read
+
 jobs:
   analyze:
     name: Analyze
     runs-on: ubuntu-latest
+
     permissions:
       actions: read
       contents: read

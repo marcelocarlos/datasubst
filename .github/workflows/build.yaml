@@ -1,12 +1,15 @@
+name: Build binaries
+
 on:
   release:
     types: [created, published]
   pull_request:
-name: Build binaries
+
 jobs:
   binaries:
     name: Build and upload
     runs-on: ubuntu-latest
+
     steps:
       - name: Install Go
         uses: actions/setup-go@v2
