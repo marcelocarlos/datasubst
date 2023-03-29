@@ -21,8 +21,9 @@ const usage = `Usage:
 Options:
     -j, --json-data DATA_INPUT   Input data source in JSON format.
     -y, --yaml-data DATA_INPUT   Input data source in YAML format.
+    -t, --subtree                JSON and YAML only, use a subtree of the data source instead of the full contents
     -e, --env-data               Input data source comes from environment variables.
-    -i, --input INPUT            Input template file in go template format.
+    -i, --input INPUT            Input template file or directory containig template(s) in go template format.
     -o, --output OUTPUT          Write the output to the file at OUTPUT.
     -s, --strict                 Strict mode (causes an error if a key is missing)
     -d, --delimiters             Set the delimiters used in the templates in the format <left>:<right> (default: '{{:}}')
@@ -35,9 +36,94 @@ Examples:
     $ datasubst --input examples/basic-input.txt --json-data examples/basic-data.json
     $ echo "v3: {{ .key2.first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml
     $ echo "{{ .TEST1 }} {{ .TEST2 }}" | TEST1="hello" TEST2="world" datasubst --env-data
-    $ echo "(( .TEST ))" | TEST="hi" datasubst --env-data -d '((:))'`
+    $ echo "(( .TEST ))" | TEST="hi" datasubst --env-data -d '((:))'
+		$ echo "v3: {{ .first.key3 }}" | datasubst --yaml-data examples/basic-data.yaml --subtree .key2`
 
 var Version string
+
+var (
+	inputFile, outputFile, jsonDataFile, yamlDataFile, delimiters, subtree string
+	envFlag, strictFlag, helpFlag, versionFlag                             bool
+)
+
+func main() {
+	log.SetFlags(0)
+	parseArgs()
+
+	// Read input
+	in := os.Stdin
+	if inputFile != "" && inputFile != "-" {
+		f, err := os.Open(inputFile)
+		if err != nil {
+			log.Fatalf("Error opening input file: %v\n", err)
+		}
+		defer f.Close()
+		in = f
+	}
+	tplStr, err := ioutil.ReadAll(in)
+	if err != nil {
+		log.Fatalf("Error reading input file: %v\n", err)
+	}
+
+	// Read and Parse data file
+	var data interface{}
+	if jsonDataFile != "" {
+		data, err = parseJSON(jsonDataFile)
+		if subtree != "" {
+			data = getSubTree(data, subtree)
+		}
+	} else if yamlDataFile != "" {
+		data, err = parseYAML(yamlDataFile)
+		if subtree != "" {
+			data = getSubTree(data, subtree)
+		}
+	} else {
+		data, err = parseEnv()
+	}
+	if err != nil {
+		log.Fatalf("Error opening data file: %v\n", err)
+	}
+
+	// Prepare Template
+	tpl := template.New("template")
+	if strictFlag {
+		tpl.Option("missingkey=error")
+	}
+	if delimiters != "" {
+		if strings.Count(delimiters, ":") != 1 || delimiters[len(delimiters)-1:] == ":" || delimiters[0:1] == ":" {
+			log.Fatal("Error: invalid delimiter format. Must be '<left>:<right>' and ':'")
+		}
+		d := strings.Split(delimiters, ":")
+		tpl.Delims(d[0], d[1])
+	}
+	tpl, err = tpl.Parse(string(tplStr))
+	if err != nil {
+		log.Fatalf("Error parsing template: %v\n", err)
+	}
+
+	// Render
+	out := os.Stdout
+	if outputFile != "" && outputFile != "-" {
+		out, err = os.Create(outputFile)
+		if err != nil {
+			log.Fatalf("Error creating output file: %v\n", err)
+		}
+		defer out.Close()
+	}
+	err = tpl.Execute(out, data)
+	if err != nil {
+		log.Fatalf("Error rendering template: %v\n", err)
+	}
+}
+
+func getSubTree(data interface{}, substree string) interface{} {
+	st := strings.Split(subtree, ".")[1:]
+	for _, k := range st {
+		v := data.(map[string]interface{})
+		data = v[k]
+	}
+	return data
+}
 
 func parseYAML(yamlDataFile string) (interface{}, error) {
 	var data interface{}
@@ -86,22 +172,18 @@ func countTrue(b ...bool) int {
 	return n
 }
 
-func main() {
-	log.SetFlags(0)
+func parseArgs() {
 	flag.Usage = func() { fmt.Fprintf(os.Stderr, "%s\n", usage) }
 	if len(os.Args) == 1 {
 		log.Fatalf("%s\n", usage)
 	}
 
-	var (
-		inputFile, outputFile, jsonDataFile, yamlDataFile, delimiters string
-		envFlag, strictFlag, helpFlag, versionFlag                    bool
-	)
-
-	flag.StringVar(&inputFile, "input", "", "input template file in go template format")
-	flag.StringVar(&inputFile, "i", "", "input template file in go template format")
+	flag.StringVar(&inputFile, "input", "", "input template file or directory containig template(s) in go template format")
+	flag.StringVar(&inputFile, "i", "", "input template file or directory containig template(s) in go template format")
 	flag.StringVar(&jsonDataFile, "json-data", "", "input data source in JSON format")
 	flag.StringVar(&jsonDataFile, "j", "", "input data source in JSON format")
+	flag.StringVar(&subtree, "subtree", "", "subtree to be used (e.g. .my_key.my_subkey)")
+	flag.StringVar(&subtree, "t", "", "subtree to be used (e.g. .my_key.my_subkey)")
 	flag.BoolVar(&envFlag, "env-data", false, "input data source comes from environment variables")
 	flag.BoolVar(&envFlag, "e", false, "input data source comes from environment variables")
 	flag.StringVar(&outputFile, "output", "", "write the output to the file at OUTPUT")
@@ -119,76 +201,22 @@ func main() {
 	if versionFlag {
 		if Version != "" {
 			fmt.Println(Version)
-			return
+			os.Exit(0)
 		}
 		if buildInfo, ok := debug.ReadBuildInfo(); ok {
 			fmt.Println(buildInfo.Main.Version)
-			return
+			os.Exit(0)
 		}
 		fmt.Println("(unknown)")
-		return
+		os.Exit(0)
 	}
 
 	if helpFlag {
 		fmt.Println(usage)
-		return
+		os.Exit(0)
 	}
 
 	if countTrue(jsonDataFile != "", yamlDataFile != "", envFlag) != 1 {
 		log.Fatal("Error: please specify --json-data, --yaml-data or --env-data")
-	}
-	// Read input
-	in := os.Stdin
-	if inputFile != "" && inputFile != "-" {
-		f, err := os.Open(inputFile)
-		if err != nil {
-			log.Fatalf("Error opening input file: %v\n", err)
-		}
-		defer f.Close()
-		in = f
-	}
-	tplStr, err := ioutil.ReadAll(in)
-	if err != nil {
-		log.Fatalf("Error reading input file: %v\n", err)
-	}
-	// Read and Parse data file
-	var data interface{}
-	if jsonDataFile != "" {
-		data, err = parseJSON(jsonDataFile)
-	} else if yamlDataFile != "" {
-		data, err = parseYAML(yamlDataFile)
-	} else {
-		data, err = parseEnv()
-	}
-	if err != nil {
-		log.Fatalf("Error opening data file: %v\n", err)
-	}
-	tpl := template.New("template")
-	if strictFlag {
-		tpl.Option("missingkey=error")
-	}
-	if delimiters != "" {
-		if strings.Count(delimiters, ":") != 1 || delimiters[len(delimiters)-1:] == ":" || delimiters[0:1] == ":" {
-			log.Fatal("Error: invalid delimiter format. Must be '<left>:<right>' and ':'")
-		}
-		d := strings.Split(delimiters, ":")
-		tpl.Delims(d[0], d[1])
-	}
-	tpl, err = tpl.Parse(string(tplStr))
-	if err != nil {
-		log.Fatalf("Error parsing template: %v\n", err)
-	}
-	// Render
-	out := os.Stdout
-	if outputFile != "" && outputFile != "-" {
-		out, err = os.Create(outputFile)
-		if err != nil {
-			log.Fatalf("Error creating output file: %v\n", err)
-		}
-		defer out.Close()
-	}
-	err = tpl.Execute(out, data)
-	if err != nil {
-		log.Fatalf("Error rendering template: %v\n", err)
 	}
 }
