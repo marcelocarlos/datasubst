@@ -10,4 +10,4 @@ The current versions are being actively supported/maintained:
 
 ## Reporting a Vulnerability
 
-Please send an email to me@marcelocarlos.com to report vulnerabilities.
+Please report a vulnerability via the [Report a Vulnerability](https://github.com/marcelocarlos/datasubst/security/advisories) option. Thank you!
