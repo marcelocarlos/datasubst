@@ -25,6 +25,18 @@ If you don't want to install it, you can run `datasubst` via Docker instead:
 docker run --rm ghcr.io/marcelocarlos/datasubst:v0
 ```
 
+### GitHub Action
+
+There is also a [setup-datasubst](https://github.com/marcelocarlos/setup-datasubst) action available so you can use
+datasubst in your GitHub Actions workflow. To use it, just add the following step in you workflow:
+
+```yaml
+- name: Setup datasubst
+  uses: marcelocarlos/setup-datasubst@v1
+  with:
+    version: v0.7.0
+```
+
 ## Usage
 
 ```shell
